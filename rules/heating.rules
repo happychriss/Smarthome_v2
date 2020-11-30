@@ -1,0 +1,130 @@
+// ***************** Arbeitszimmer ****************************************************************************************************
+// Second, Minutes, Hours, day-of-month, month, day of week, year
+// ? is any value for day of month, day of week
+
+rule "Heating Arbeitszimmer- Night Mode - Switch off at night"
+when
+	Time cron "0 0 23 1/1 * ? *"
+then
+        sendCommand(FRITZDECT3011Arbeitszimmer_RadiatorMode,'OFF')    
+end
+
+rule "Heating Arbeitszimmer- Worday with Homeoffice "
+when
+	Time cron "0 45 8 ? * MON,TUE,WED,THU,FRI *"
+then
+        if (CNOut.state==ON) {
+            logInfo("heating","Heating remains off - ABSENCE MODE") 
+        } else {
+            logInfo("heating","Homeoffice - Make it warm all day") 
+            sendCommand(FRITZDECT3011Arbeitszimmer_RadiatorMode,'COMFORT')                
+        }
+
+end
+
+
+// Make it warm at weekend and in the evening
+
+rule "Heating - Weekend Warm Mode - Switch to COMFORT all day"
+when
+	Time cron "0 0 10 ? * SAT,SUN *"
+then
+    if(CNOut.state==ON) {
+        logInfo("heating","Heating remains off - ABSENCE MODE") 
+
+    } else {
+        logInfo("heating","Weekend - Make it warm all day") 
+        sendCommand(FRITZDECT3011Arbeitszimmer_RadiatorMode,'COMFORT')    
+    }
+end
+
+
+ rule "Heating - When Christian comes home"
+ when
+	 Item CNOut changed 
+ then
+    if (CNOut.state==ON) {
+        // CN out, heating down to ECO
+        logInfo("heating","Christian is out  - Heating to ECO") 
+        sendCommand(FRITZDECT3011Arbeitszimmer_RadiatorMode,'ECO')    
+
+    } else {
+        // CN at homw, make it warm
+        var Number hours = now.getHourOfDay
+        logInfo("heating",hours.toString) 
+
+        if (hours <= 22) {
+            logInfo("heating","Christian coming home  - make it warm - Heating to COMFORT" ) 
+            sendCommand(FRITZDECT3011Arbeitszimmer_RadiatorMode,'COMFORT')    
+        }
+    }
+ end
+
+
+// ***************** Küche  **************************************************************************************************************************
+// Second, Minutes, Hours, day-of-month, month, day of week, year
+// ? is any value for day of month, day of week
+
+rule "Heating Kitchen - Night Mode - Switch off at night"
+when
+	Time cron "0 0 20 1/1 * ? *"
+then
+        sendCommand(FRITZDECT3011Kueche_RadiatorMode,'OFF')    
+        logInfo("heating","Good Night  - Heating Kitchen to OFF") 
+end
+
+rule "Heating - Christian is out"
+when
+	 Item CNOut changed 
+then
+    if (CNOut.state==ON) {
+        sendCommand(FRITZDECT3011Kueche_RadiatorMode,'OFF')    
+        logInfo("heating","Christian Out  - Heating Kitchen to ECO") 
+    
+    }
+end
+
+rule "Heating Kitchen - Good Morning on Workdays"
+when
+	 Time cron "0 0 7 ? * MON,TUE,WED,THU,FRI *"
+then
+    if (CNOut.state==OFF) {
+        sendCommand(FRITZDECT3011Kueche_RadiatorMode ,'COMFORT')    
+        logInfo("heating","Good Monring on Wordays  - Heating Kitchen to Comfort") 
+        createTimer(now.plusMinutes(50))[|
+                logInfo("kueche_heizung_morgens", "Start Timer for 50min")    
+                sendCommand(FRITZDECT3011Kueche_RadiatorMode ,'ECO')    
+        ]            
+    }
+end
+
+rule "Heating Kitchen - Good Morning on Weekend"
+when
+	 Time cron "0 0 8 ? * SAT,SUN *"
+then
+    if (CNOut.state==OFF) {
+        sendCommand(FRITZDECT3011Kueche_RadiatorMode ,'COMFORT')    
+        logInfo("heating","Good Monring on Weekend  - Heating Kitchen to Comfort") 
+        createTimer(now.plusMinutes(120))[|
+                logInfo("kueche_heizung_morgens", "Start Timer for 120min")    
+                sendCommand(FRITZDECT3011Kueche_RadiatorMode ,'ECO')    
+                ]            
+    }
+end
+
+rule "Heating Kitchen - Lunchtime"
+when
+		Time cron "0 0 12 1/1 * ? *"
+then
+    if (CNOut.state==OFF) {
+        sendCommand(FRITZDECT3011Kueche_RadiatorMode ,'COMFORT')    
+        logInfo("heating","Lunchtime  - Heating Kitchen to Comfort") 
+        createTimer(now.plusMinutes(50))[|
+                logInfo("kueche_heizung_mittags", "Start Timer for 70min")    
+                sendCommand(FRITZDECT3011Kueche_RadiatorMode ,'ECO')    
+                ]            
+    }
+end
+
+
+
